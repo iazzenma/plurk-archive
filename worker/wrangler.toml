@@ -1,0 +1,7 @@
+name = "plurk-archive-worker"
+main = "index.js"
+compatibility_date = "2024-01-01"
+
+[[kv_namespaces]]
+binding = "PLURK_ARCHIVE"
+id = "59ca35ff015c4b66a4d2188335bf93e7"

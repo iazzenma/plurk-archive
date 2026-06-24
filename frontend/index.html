@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f5eee4" />
+  <title>噗滿 — 噗浪貼文備份</title>
+  <style>
+    /* ── Token system ── */
+    :root {
+      --ink:       #4b3f34;
+      --ink-soft:  #7a6a5e;
+      --ink-muted: #a09284;
+      --paper:     #fdf8ef;
+      --paper-warm:#f5eee4;
+      --rule:      #e1d3c1;
+      --accent:    #bc6a3c;
+      --accent-bg: #f6e3d5;
+      --success:   #5f8a63;
+
+      --sans:  'Helvetica Neue', Helvetica, Arial, 'PingFang TC', 'Microsoft JhengHei', 'Heiti TC', sans-serif;
+
+      --r: 6px;
+      --shadow: 0 1px 3px rgba(75,63,52,.08), 0 8px 24px rgba(75,63,52,.06);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+       scroll-behavior: smooth;
+       color-scheme: light;
+     }
+
+    body {
+      font-family: var(--sans);
+      background: var(--paper);
+      color: var(--ink);
+      min-height: 100vh;
+      line-height: 1.7;
+    }
+
+    /* ── Header ── */
+    .site-header {
+      background: #f3e5d4;
+      color: var(--ink);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .site-logo {
+      font-size: 1.2rem;
+      font-weight: 700;
+      letter-spacing: .04em;
+      color: var(--ink);
+      text-decoration: none;
+    }
+
+    .site-logo span {
+      color: var(--accent);
+    }
+
+    .header-sub {
+      font-size: .75rem;
+      color: var(--ink-muted);
+      letter-spacing: .06em;
+    }
+
+    /* ── Hero / Input ── */
+    .hero {
+      background: var(--paper-warm);
+      border-bottom: 1px solid var(--rule);
+      padding: 40px 24px 36px;
+      text-align: center;
+    }
+
+    .hero-title {
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+
+    .hero-sub {
+      color: var(--ink-soft);
+      font-size: .95rem;
+      margin-bottom: 28px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+      max-width: 580px;
+      margin: 0 auto;
+    }
+
+.url-input {
+       flex: 1;
+       border: 1.5px solid var(--rule);
+       border-radius: var(--r);
+       padding: 11px 14px;
+       font-family: var(--sans);
+       font-size: .9rem;
+      background: #fffaf3;
+       color: var(--ink);
+       outline: none;
+       transition: border-color .15s;
+     }
+
+     .url-input:focus { border-color: var(--accent); }
+     .url-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+     .url-input::placeholder { color: var(--ink-muted); }
+
+     .btn {
+       cursor: pointer;
+       border: none;
+       border-radius: var(--r);
+       padding: 11px 20px;
+       font-family: var(--sans);
+       font-size: .9rem;
+       font-weight: 500;
+       transition: opacity .15s, transform .1s;
+     }
+     .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+     .btn:active { transform: scale(.97); }
+     .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 8px 18px rgba(188, 106, 60, .18);
+    }
+    .btn-primary:hover:not(:disabled) { opacity: .88; }
+
+    .btn-ghost {
+      background: transparent;
+      border: 1.5px solid var(--rule);
+      color: var(--ink-soft);
+    }
+    .btn-ghost:hover:not(:disabled) { border-color: var(--ink-soft); color: var(--ink); }
+
+    .btn-sm {
+      padding: 7px 14px;
+      font-size: .82rem;
+    }
+
+    /* ── Status / error ── */
+    .status-bar {
+      max-width: 700px;
+      margin: 20px auto 0;
+      padding: 0 24px;
+      display: none;
+    }
+
+    .status-bar.visible { display: block; }
+
+    .msg {
+      padding: 12px 16px;
+      border-radius: var(--r);
+      font-size: .88rem;
+    }
+
+    .msg-error { background: #fdecea; color: #b92b1a; border: 1px solid #f5c4be; }
+    .msg-info  { background: var(--accent-bg); color: var(--accent); border: 1px solid #f2c9b8; }
+    .msg-ok    { background: #edf7f0; color: var(--success); border: 1px solid #b8dfc2; }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid var(--rule);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Main layout ── */
+    .main {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 32px 24px 60px;
+      display: none;
+    }
+
+    .main.visible { display: block; }
+
+    /* ── Archive card ── */
+    .archive-card {
+      background: #fff;
+      border: 1px solid var(--rule);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    /* card header */
+    .card-meta {
+      background: #f7ecdf;
+      border-bottom: 1px solid var(--rule);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .avatar {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: var(--rule);
+      border: 2px solid #fff;
+    }
+
+    .avatar-placeholder {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: var(--rule);
+      flex-shrink: 0;
+    }
+
+    .meta-info { flex: 1; min-width: 0; }
+
+    .display-name {
+      font-size: 1rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .username {
+      font-size: .78rem;
+      color: var(--ink-muted);
+      margin-top: 1px;
+    }
+
+    .meta-right {
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .posted-time {
+      font-size: .78rem;
+      color: var(--ink-muted);
+    }
+
+    .qualifier-badge {
+      display: inline-block;
+      background: var(--accent-bg);
+      color: var(--accent);
+      font-size: .72rem;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 20px;
+      margin-top: 4px;
+      border: 1px solid #f2c9b8;
+    }
+
+    /* content */
+    .card-content {
+      padding: 22px 20px 18px;
+      font-size: 1.05rem;
+      line-height: 1.75;
+      color: var(--ink);
+      word-break: break-word;
+    }
+
+.card-content img {
+       max-width: 100%;
+       height: auto;
+       border-radius: 6px;
+       margin-top: 10px;
+       display: block;
+     }
+
+    .content-image {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      display: block;
+      margin: 10px 0 0;
+      border: 1px solid var(--rule);
+      background: #fff;
+    }
+
+    .card-content a {
+      color: var(--accent);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    /* card footer */
+    .card-footer {
+      border-top: 1px solid var(--rule);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .response-count {
+      font-size: .82rem;
+      color: var(--ink-soft);
+    }
+
+    .response-count strong {
+      color: var(--ink);
+      font-weight: 600;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    /* ── Responses ── */
+    .responses-section {
+      margin-top: 20px;
+    }
+
+    .responses-label {
+      font-size: .78rem;
+      font-weight: 500;
+      color: var(--ink-muted);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .response-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .response-item {
+      display: flex;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--rule);
+      animation: fadeUp .2s ease;
+    }
+
+    .response-item:last-child { border-bottom: none; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .resp-avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: var(--rule);
+    }
+
+    .resp-body { flex: 1; min-width: 0; }
+
+    .resp-header {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 2px;
+    }
+
+    .resp-name {
+      font-weight: 700;
+      font-size: .88rem;
+    }
+
+    .resp-qualifier {
+      font-size: .75rem;
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .resp-time {
+      font-size: .74rem;
+      color: var(--ink-muted);
+      margin-left: auto;
+    }
+
+    .resp-content {
+      font-size: .9rem;
+      color: var(--ink);
+      word-break: break-word;
+      line-height: 1.65;
+    }
+
+    .resp-content a { color: var(--accent); }
+
+    /* ── Archive info strip ── */
+    .archive-info {
+      margin-top: 20px;
+      padding: 12px 16px;
+      background: #f7ecdf;
+      border: 1px solid var(--rule);
+      border-radius: var(--r);
+      font-size: .8rem;
+      color: var(--ink-soft);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .archive-info .updated-at { color: var(--ink-muted); }
+
+    .share-row {
+      margin-top: 14px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .share-url {
+      flex: 1;
+      border: 1.5px solid var(--rule);
+      border-radius: var(--r);
+      padding: 8px 12px;
+      font-size: .8rem;
+      font-family: monospace;
+      background: #fff;
+      color: var(--ink-soft);
+      outline: none;
+      cursor: text;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── Empty responses ── */
+    .empty-responses {
+      padding: 24px 0;
+      text-align: center;
+      color: var(--ink-muted);
+      font-size: .88rem;
+    }
+
+    /* ── Deleted notice ── */
+    .deleted-notice {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: .75rem;
+      color: #b92b1a;
+      background: #fdecea;
+      border: 1px solid #f5c4be;
+      border-radius: 20px;
+      padding: 2px 10px;
+    }
+
+    /* ── History details ── */
+    .history-details {
+      margin-top: 12px;
+      font-size: .85rem;
+      background: #faf6f0;
+      border: 1px solid var(--rule);
+      border-radius: var(--r);
+    }
+    .history-details summary {
+      padding: 8px 12px;
+      cursor: pointer;
+      color: var(--ink-soft);
+      font-weight: 500;
+      user-select: none;
+    }
+    .history-details summary:hover {
+      color: var(--ink);
+      background: #f3ede4;
+      border-radius: var(--r);
+    }
+    .history-list {
+      padding: 0 12px 12px;
+      border-top: 1px dashed var(--rule);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .history-item {
+      padding-top: 10px;
+    }
+    .history-time {
+      font-size: .75rem;
+      color: var(--ink-muted);
+      margin-bottom: 4px;
+    }
+    .history-content {
+      color: var(--ink-soft);
+    }
+
+    /* ── Footer ── */
+    .site-footer {
+      border-top: 1px solid var(--rule);
+      padding: 20px 24px;
+      text-align: center;
+      font-size: .78rem;
+      color: var(--ink-muted);
+    }
+
+/* ── Responsive ── */
+     @media (max-width: 480px) {
+       .input-row { flex-direction: column; }
+       .card-footer { flex-direction: column; align-items: flex-start; }
+       .archive-info { flex-direction: column; }
+     }
+
+     @media (prefers-reduced-motion: reduce) {
+       *, .spinner { animation: none !important; transition: none !important; }
+     }
+
+     .sr-only {
+       position: absolute;
+       width: 1px;
+       height: 1px;
+       padding: 0;
+       margin: -1px;
+       overflow: hidden;
+       clip: rect(0, 0, 0, 0);
+       white-space: nowrap;
+       border: 0;
+     }
+   </style>
+</head>
+<body>
+
+<header class="site-header">
+   <a class="site-logo" href="./" aria-label="噗滿">噗滿</a>
+   <span class="header-sub">噗浪貼文備份工具</span>
+</header>
+
+<section class="hero">
+   <h1 class="hero-title">貼上噗文網址，查看或建立備份</h1>
+   <!-- <p class="hero-sub">貼上噗浪貼文網址，建立可更新和分享的備份連結</p> -->
+   <div class="input-row">
+     <label for="urlInput" class="sr-only">噗浪貼文網址</label>
+     <input
+       class="url-input"
+       id="urlInput"
+       type="url"
+       placeholder="https://www.plurk.com/p/xxxxxxxx…"
+       autocomplete="off"
+       spellcheck="false"
+     />
+     <button class="btn btn-primary" id="archiveBtn">備份</button>
+   </div>
+</section>
+
+<div class="status-bar" id="statusBar">
+  <div class="msg" id="statusMsg"></div>
+</div>
+
+<main class="main" id="mainArea">
+   <div class="archive-card" id="archiveCard">
+     <!-- filled by JS -->
+   </div>
+
+   <div class="responses-section" id="responsesSection">
+     <div class="responses-label">回噗 <span id="responseCountLabel"></span></div>
+     <div class="response-list" id="responseList"></div>
+   </div>
+
+   <div class="archive-info" id="archiveInfoBar">
+     <span class="updated-at" id="updatedAtLabel"></span>
+     <div class="card-actions">
+       <button class="btn btn-ghost btn-sm" id="refreshBtn">↻ 更新留言</button>
+       <!-- <button class="btn btn-ghost btn-sm" id="copyLinkBtn">複製分享連結</button> -->
+     </div>
+   </div>
+
+   <div class="share-row">
+     <input class="share-url" id="shareUrlInput" type="text" readonly name="shareUrl" />
+     <button class="btn btn-ghost btn-sm" id="copyUrlBtn">複製</button>
+   </div>
+</main>
+
+<footer class="site-footer">
+  噗滿 · 圖片僅保留網址，若原噗刪除圖片可能失效<br>
+  © 2026 <a href="https://www.plurk.com/iazze" target="_blank" rel="noopener">iazze</a>
+</footer>
+
+<script>
+// ── Config ──────────────────────────────────────────────────────────────────
+// 部署後把這裡換成你的 Cloudflare Worker 網址
+const WORKER_URL = 'https://plurk-archive-worker.jasta0927.workers.dev';
+
+// ── State ────────────────────────────────────────────────────────────────────
+let currentPlurkId = null;
+
+// ── On load: check URL params ─────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(location.search);
+  const p = params.get('p');
+  if (p) {
+    currentPlurkId = p;
+    loadFromWorker(p);
+  }
+  // attach event listeners
+  document.getElementById('archiveBtn').addEventListener('click', handleArchive);
+  document.getElementById('refreshBtn').addEventListener('click', handleRefresh);
+  document.getElementById('copyLinkBtn').addEventListener('click', copyShareUrl);
+  document.getElementById('copyUrlBtn').addEventListener('click', copyShareUrl);
+  document.getElementById('shareUrlInput').addEventListener('click', () => {
+    document.getElementById('shareUrlInput').select();
+  });
+});
+
+// ── Parse plurk URL → id ──────────────────────────────────────────────────
+function parsePlurkUrl(raw) {
+  raw = raw.trim();
+  // https://www.plurk.com/p/XXXXX  or  plurk.com/p/XXXXX
+  const m = raw.match(/plurk\.com\/p\/([a-zA-Z0-9]+)/);
+  if (m) return m[1];
+  // bare id
+  if (/^[a-zA-Z0-9]+$/.test(raw)) return raw;
+  return null;
+}
+
+// ── Handlers ─────────────────────────────────────────────────────────────────
+async function handleArchive() {
+  const raw = document.getElementById('urlInput').value;
+  const id = parsePlurkUrl(raw);
+  if (!id) {
+    showStatus('error', '請輸入有效的噗浪貼文網址，例如：https://www.plurk.com/p/xxxxxxxx');
+    return;
+  }
+  currentPlurkId = id;
+  await saveToWorker(id);
+}
+
+async function handleRefresh() {
+  if (!currentPlurkId) return;
+  await saveToWorker(currentPlurkId, true);
+}
+
+// ── API calls ─────────────────────────────────────────────────────────────────
+async function saveToWorker(plurkId, isRefresh = false) {
+  setLoading(true, isRefresh ? '更新留言中…' : '抓取並儲存中…');
+  try {
+    const res = await fetch(`${WORKER_URL}/save`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plurk_id: plurkId }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '發生錯誤');
+    showStatus('ok', isRefresh ? `留言已更新，共 ${data.responses?.length ?? 0} 則回噗` : '備份成功！');
+    renderArchive(data);
+    updateShareUrl(plurkId);
+  } catch (e) {
+    showStatus('error', e.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+async function loadFromWorker(plurkId) {
+  setLoading(true, '載入備份中…');
+  try {
+    const res = await fetch(`${WORKER_URL}/get?plurk_id=${plurkId}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '找不到此備份');
+    renderArchive(data);
+    updateShareUrl(plurkId);
+    hideStatus();
+  } catch (e) {
+    showStatus('error', e.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderArchive(data) {
+  const { plurk, owner, responses, saved_at, is_deleted } = data;
+
+  // ── card ──
+const card = document.getElementById('archiveCard');
+   card.innerHTML = `
+     <div class="card-meta">
+       ${owner?.avatar_url
+         ? `<img class="avatar" src="${esc(owner.avatar_url)}" width="44" height="44" alt="${esc(owner.display_name)}" onerror="this.style.display='none'">`
+         : `<div class="avatar-placeholder"></div>`}
+      <div class="meta-info">
+        <div class="display-name">${esc(owner?.display_name ?? owner?.nick_name ?? (plurk.owner_id ? `#${plurk.owner_id}` : '未知用戶'))}</div>
+        <div class="username">@${esc(owner?.nick_name ?? plurk.owner_id ?? '')}</div>
+      </div>
+      <div class="meta-right">
+        <div class="posted-time">${formatTime(plurk.posted)}</div>
+        ${plurk.qualifier ? `<div class="qualifier-badge">${esc(qualifierLabel(plurk.qualifier))}</div>` : ''}
+      </div>
+    </div>
+    <div class="card-content">${renderContent(plurk.content)}</div>
+    ${renderHistory(plurk.history)}
+    <div class="card-footer">
+      <span class="response-count">
+        <strong>${responses?.length ?? 0}</strong> 則回噗
+        ${is_deleted ? '<span class="deleted-notice">⚠ 原文已刪除</span>' : ''}
+      </span>
+    </div>
+  `;
+
+  // ── responses ──
+  const list = document.getElementById('responseList');
+  const section = document.getElementById('responsesSection');
+  document.getElementById('responseCountLabel').textContent = `(${responses?.length ?? 0})`;
+
+  if (!responses || responses.length === 0) {
+    list.innerHTML = '<div class="empty-responses">目前沒有回噗</div>';
+  } else {
+list.innerHTML = responses.map(r => `
+       <div class="response-item">
+         ${r.avatar_url
+           ? `<img class="resp-avatar" src="${esc(r.avatar_url)}" width="32" height="32" alt="${esc(r.display_name)}" onerror="this.style.display='none'">`
+           : `<div class="resp-avatar"></div>`}
+        <div class="resp-body">
+          <div class="resp-header">
+            <span class="resp-name">${esc(r.display_name ?? r.nick_name ?? '?')}</span>
+            ${r.qualifier ? `<span class="resp-qualifier">${esc(qualifierLabel(r.qualifier))}</span>` : ''}
+            <span class="resp-time">${formatTime(r.posted)}</span>
+          </div>
+          <div class="resp-content">${renderContent(r.content)}</div>
+          ${renderHistory(r.history)}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  section.style.display = 'block';
+
+  // ── archive info ──
+  document.getElementById('updatedAtLabel').textContent =
+    `備份時間：${formatTime(saved_at)}`;
+
+  document.getElementById('mainArea').classList.add('visible');
+  document.getElementById('mainArea').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function renderHistory(history) {
+  if (!history || history.length === 0) return '';
+  const items = history.map(h => `
+    <div class="history-item">
+      <div class="history-time">${formatTime(h.updated_at)} 之前的版本：</div>
+      <div class="history-content">${renderContent(h.content)}</div>
+    </div>
+  `).join('');
+  return `
+    <details class="history-details">
+      <summary>顯示編輯紀錄 (${history.length})</summary>
+      <div class="history-list">${items}</div>
+    </details>
+  `;
+}
+function esc(s) {
+  if (!s) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function renderContent(html) {
+  if (!html) return '';
+
+  const safeHtml = String(html)
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+    .replace(/on\w+=(["']).*?\1/gi, '')
+    .replace(/javascript:/gi, '');
+
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = safeHtml;
+
+  wrapper.querySelectorAll('img').forEach(img => {
+    const src = img.getAttribute('src') || '';
+    if (!isAllowedImageUrl(src)) {
+      img.remove();
+      return;
+    }
+    img.classList.add('content-image');
+    img.removeAttribute('width');
+    img.removeAttribute('height');
+    img.removeAttribute('style');
+    img.setAttribute('loading', 'lazy');
+    img.setAttribute('referrerpolicy', 'no-referrer');
+  });
+
+  convertImageUrlsInTextNodes(wrapper);
+
+  wrapper.querySelectorAll('a').forEach(anchor => {
+    const href = anchor.getAttribute('href') || '';
+    if (!isAllowedUrl(href)) return;
+    if (isAllowedImageUrl(href) && anchor.textContent.trim() === href.trim()) {
+      const image = document.createElement('img');
+      image.src = href;
+      image.alt = '';
+      image.loading = 'lazy';
+      image.referrerPolicy = 'no-referrer';
+      image.className = 'content-image';
+      anchor.replaceWith(image);
+      return;
+    }
+    anchor.setAttribute('rel', 'noopener noreferrer');
+    anchor.setAttribute('target', '_blank');
+  });
+
+  return wrapper.innerHTML;
+}
+
+function convertImageUrlsInTextNodes(root) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const textNodes = [];
+  while (walker.nextNode()) textNodes.push(walker.currentNode);
+
+  const imageUrlPattern = /(https?:\/\/[^\s<>'"()]+\.(?:png|jpe?g|gif|webp|bmp|svg)(?:\?[^\s<>'"]*)?)/gi;
+
+  textNodes.forEach(node => {
+    const text = node.nodeValue || '';
+    if (!imageUrlPattern.test(text)) return;
+
+    imageUrlPattern.lastIndex = 0;
+    const fragment = document.createDocumentFragment();
+    let lastIndex = 0;
+    let match;
+
+    while ((match = imageUrlPattern.exec(text)) !== null) {
+      const [url] = match;
+      const start = match.index;
+      if (start > lastIndex) {
+        fragment.appendChild(document.createTextNode(text.slice(lastIndex, start)));
+      }
+
+      if (isAllowedImageUrl(url)) {
+        const image = document.createElement('img');
+        image.src = url;
+        image.alt = '';
+        image.loading = 'lazy';
+        image.referrerPolicy = 'no-referrer';
+        image.className = 'content-image';
+        fragment.appendChild(image);
+      } else {
+        fragment.appendChild(document.createTextNode(url));
+      }
+
+      lastIndex = start + url.length;
+    }
+
+    if (lastIndex < text.length) {
+      fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+    }
+
+    node.parentNode.replaceChild(fragment, node);
+  });
+}
+
+function isAllowedUrl(url) {
+  try {
+    const parsed = new URL(url, location.origin);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function isAllowedImageUrl(url) {
+  if (!isAllowedUrl(url)) return false;
+  const lower = String(url).toLowerCase();
+  return /\.(png|jpe?g|gif|webp|bmp|svg)(\?|#|$)/.test(lower) || lower.includes('images.plurk.com') || lower.includes('avatars.plurk.com');
+}
+
+function formatTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (isNaN(d)) return ts;
+  return d.toLocaleString('zh-TW', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+
+function qualifierLabel(q) {
+  const map = {
+    says: '說', loves: '愛', likes: '喜歡', shares: '分享',
+    gives: '給', hates: '討厭', wants: '想要', has: '有',
+    will: '將', asks: '問', is: '是', feels: '覺得', thinks: '認為',
+    wishes: '希望', hopes: '希望', needs: '需要', adores: '愛慕',
+    is_happy: '開心', is_sad: '難過', recommends: '推薦',
+    was: '曾經', has_read: '讀了', played: '玩了', watched: '看了',
+    ate: '吃了', visited: '拜訪了', went_to: '去了',
+    ':': ':',
+  };
+  return map[q] ?? q;
+}
+
+function updateShareUrl(plurkId) {
+  const url = `${location.origin}${location.pathname}?p=${plurkId}`;
+  document.getElementById('shareUrlInput').value = url;
+  history.replaceState({}, '', `?p=${plurkId}`);
+}
+
+function copyShareUrl() {
+  const input = document.getElementById('shareUrlInput');
+  input.select();
+  navigator.clipboard.writeText(input.value).catch(() => document.execCommand('copy'));
+  showStatus('ok', '分享連結已複製！');
+  setTimeout(hideStatus, 2000);
+}
+
+function setLoading(on, msg = '') {
+  const btn = document.getElementById('archiveBtn');
+  const refreshBtn = document.getElementById('refreshBtn');
+  btn.disabled = on;
+  if (refreshBtn) refreshBtn.disabled = on;
+  if (on && msg) showStatus('info', `<span class="spinner"></span>${msg}`);
+}
+
+function showStatus(type, html) {
+  const bar = document.getElementById('statusBar');
+  const msg = document.getElementById('statusMsg');
+  msg.className = `msg msg-${type}`;
+  msg.innerHTML = html;
+  bar.classList.add('visible');
+}
+
+function hideStatus() {
+  document.getElementById('statusBar').classList.remove('visible');
+}
+
+// Enter key
+document.getElementById('urlInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleArchive();
+});
+</script>
+</body>
+</html>
